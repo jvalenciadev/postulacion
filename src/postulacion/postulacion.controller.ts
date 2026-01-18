@@ -2,7 +2,7 @@ import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { PostulacionService } from './postulacion.service';
 import { ApiKeyGuard } from '../auth/api-key.guard';
 
-@Controller()
+@Controller('api')
 @UseGuards(ApiKeyGuard)
 export class PostulacionController {
     constructor(private readonly postulacionService: PostulacionService) { }

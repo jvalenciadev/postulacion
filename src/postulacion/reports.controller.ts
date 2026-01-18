@@ -3,7 +3,7 @@ import { Controller, Get, Query, Res, Render } from '@nestjs/common';
 import { ReportsService } from './reports.service';
 import type { Response } from 'express';
 
-@Controller('reports')
+@Controller()
 export class ReportsController {
     constructor(private readonly reportsService: ReportsService) { }
 
@@ -15,38 +15,38 @@ export class ReportsController {
         return { layout: false, ...result };
     }
 
-    @Get('api/departamentos')
+    @Get('reports/api/departamentos')
     async getDepartamentos() {
         const result = await this.reportsService.getFilters();
         return result.departamentos;
     }
 
-    @Get('api/recintos')
+    @Get('reports/api/recintos')
     async getRecintos(@Query('dep_id') depId: number) {
         return await this.reportsService.getRecintosByDepartamento(depId);
     }
 
-    @Get('api/fechas')
+    @Get('reports/api/fechas')
     async getFechas(@Query('recinto_id') recintoId: number) {
         return await this.reportsService.getFechasByRecinto(recintoId);
     }
 
-    @Get('api/aulas')
+    @Get('reports/api/aulas')
     async getAulas(@Query('recinto_id') recintoId: number) {
         return await this.reportsService.getAulasByRecinto(recintoId);
     }
 
-    @Get('api/turnos')
+    @Get('reports/api/turnos')
     async getTurnos(@Query('recinto_id') recintoId: number) {
         return await this.reportsService.getTurnosByRecinto(recintoId);
     }
 
-    @Get('api/data')
+    @Get('reports/api/data')
     async getReportData(@Query() query: any) {
         return await this.reportsService.getReportData(query);
     }
 
-    @Get('pdf')
+    @Get('reports/pdf')
     async downloadPdf(@Query() query: any, @Res() res: Response) {
         const buffer = await this.reportsService.generatePdf(query);
 
