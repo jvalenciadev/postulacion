@@ -352,10 +352,7 @@
                 // Poblar datos
                 document.getElementById('resEsfm').textContent = data.esfm || '-';
                 document.getElementById('resMun').textContent = data.municipio || '-';
-                const recintoDisplay = typeof data.recinto === 'object' && data.recinto !== null
-                    ? (data.recinto.recinto_nombre || '-')
-                    : (data.recinto || '-');
-                document.getElementById('resRecinto').textContent = recintoDisplay;
+                document.getElementById('resRecinto').textContent = data.recinto || '-';
                 document.getElementById('resDir').textContent = data.direccion_recinto || '-';
                 document.getElementById('resAula').textContent = data.aula || '-';
                 document.getElementById('resEq').textContent = data.equipo || '-';
