@@ -11,7 +11,10 @@ export class PostulacionService {
     ) { }
 
     async verifyCi(ci: string): Promise<any> {
-        const postulante = await this.postulacionRepo.findOneBy({ ci });
+        const postulante = await this.postulacionRepo.findOne({
+            where: { ci },
+            relations: ['recinto']
+        });
 
         if (!postulante) {
             throw new NotFoundException('CI no encontrado o no habilitado');
@@ -21,7 +24,7 @@ export class PostulacionService {
             ci: postulante.ci,
             esfm: postulante.esfm,
             municipio: postulante.municipio,
-            recinto: postulante.recinto,
+            recinto: postulante.recinto?.recinto_nombre || '-',
             direccion_recinto: postulante.direccion,
             fecha: postulante.fecha,
             aula: postulante.aula,
