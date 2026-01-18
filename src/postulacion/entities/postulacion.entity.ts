@@ -1,9 +1,12 @@
-import { Entity, Column, PrimaryColumn } from 'typeorm';
+import { Entity, Column, PrimaryColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Departamento } from './departamento.entity';
+import { Recinto } from './recinto.entity';
 
 @Entity('postulacion_esfm')
 export class Postulacion {
-    @Column({ nullable: true })
-    departamento: string;
+    @ManyToOne(() => Departamento)
+    @JoinColumn({ name: 'dep_id' })
+    departamento: Departamento;
 
     @Column({ nullable: true })
     esfm: string;
@@ -11,8 +14,9 @@ export class Postulacion {
     @Column({ nullable: true })
     municipio: string;
 
-    @Column({ nullable: true })
-    recinto: string;
+    @ManyToOne(() => Recinto)
+    @JoinColumn({ name: 'id_recinto' })
+    recinto: Recinto;
 
     @Column({ nullable: true })
     direccion: string;

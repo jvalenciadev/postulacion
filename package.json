@@ -25,9 +25,13 @@
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/typeorm": "^11.0.0",
+    "@types/pdfkit": "^0.17.4",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
+    "hbs": "^4.2.0",
     "mysql2": "^3.16.1",
+    "pdfkit": "^0.17.2",
+    "pdfkit-table": "^0.1.99",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "typeorm": "^0.3.28"
