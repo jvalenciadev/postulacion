@@ -276,6 +276,14 @@
 
             <div class="result-grid">
                 <div class="info-item">
+                    <div class="info-label">Postulante</div>
+                    <div class="info-value" id="resNombre" style="color: var(--primary); font-weight: 700;"></div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Departamento</div>
+                    <div class="info-value" id="resDep"></div>
+                </div>
+                <div class="info-item">
                     <div class="info-label">ESFM / UA</div>
                     <div class="info-value" id="resEsfm"></div>
                 </div>
@@ -350,6 +358,8 @@
                 }
 
                 // Poblar datos
+                document.getElementById('resNombre').textContent = data.nombre_completo || '-';
+                document.getElementById('resDep').textContent = data.departamento || '-';
                 document.getElementById('resEsfm').textContent = data.esfm || '-';
                 document.getElementById('resMun').textContent = data.municipio || '-';
                 document.getElementById('resRecinto').textContent = data.recinto || '-';

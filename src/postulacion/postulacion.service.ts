@@ -13,15 +13,20 @@ export class PostulacionService {
     async verifyCi(ci: string): Promise<any> {
         const postulante = await this.postulacionRepo.findOne({
             where: { ci },
-            relations: ['departamento', 'recinto']
+            relations: ['departamento', 'recinto', 'persona']
         });
 
         if (!postulante) {
             throw new NotFoundException('CI no encontrado o no habilitado');
         }
 
+        const fullName = postulante.persona
+            ? `${postulante.persona.paterno || ''} ${postulante.persona.materno || ''}, ${postulante.persona.nombre || ''}`.trim().replace(/,\s*$/, '')
+            : '-';
+
         return {
             ci: postulante.ci,
+            nombre_completo: fullName.toUpperCase(),
             departamento: postulante.departamento?.dep_nombre || '-',
             esfm: postulante.esfm,
             municipio: postulante.municipio,

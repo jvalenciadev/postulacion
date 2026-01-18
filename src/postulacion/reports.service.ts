@@ -102,7 +102,9 @@ export class ReportsService {
             .leftJoinAndSelect('p.departamento', 'd')
             .leftJoinAndSelect('p.recinto', 'r')
             .leftJoinAndSelect('p.persona', 'pers')
-            .orderBy('CAST(p.ci AS UNSIGNED)', 'ASC'); // Numerical sort for CI as primary order
+            .orderBy('pers.paterno', 'ASC')
+            .addOrderBy('pers.materno', 'ASC')
+            .addOrderBy('pers.nombre', 'ASC');
 
         if (filters.departamento) query.andWhere('p.dep_id = :dep', { dep: filters.departamento });
         if (filters.recinto) query.andWhere('p.id_recinto = :rec', { rec: filters.recinto });
@@ -245,7 +247,7 @@ export class ReportsService {
             const cols = [
                 { header: 'N°', width: 25, align: 'center' },
                 { header: 'C.I.', width: 65, align: 'center' },
-                { header: 'NOMBRE POSTULANTE', width: 170, align: 'left' },
+                { header: 'NOMBRE POSTULANTE', width: 170, align: 'left', small: true },
                 { header: 'ESFM/UA', width: 110, align: 'left', small: true },
                 { header: 'EQUIPO', width: 45, align: 'center' },
                 { header: 'FIRMA', width: 137, align: 'center' }
@@ -308,9 +310,9 @@ export class ReportsService {
                 // Draw row border
                 doc.rect(margin, currentY, usableWidth, rowHeight).stroke();
 
-                // Concatenate full name
+                // Concatenate full name: PATERNO MATERNO, NOMBRE
                 const fullName = item.persona
-                    ? `${item.persona.paterno || ''} ${item.persona.materno || ''} ${item.persona.nombre || ''}`.trim()
+                    ? `${item.persona.paterno || ''} ${item.persona.materno || ''}, ${item.persona.nombre || ''}`.trim().replace(/,\s*$/, '')
                     : '-';
 
                 // Draw cell content
