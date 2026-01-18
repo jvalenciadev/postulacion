@@ -101,6 +101,7 @@ export class ReportsService {
         const query = this.postulacionRepository.createQueryBuilder('p')
             .leftJoinAndSelect('p.departamento', 'd')
             .leftJoinAndSelect('p.recinto', 'r')
+            .leftJoinAndSelect('p.persona', 'pers')
             .orderBy('CAST(p.ci AS UNSIGNED)', 'ASC'); // Numerical sort for CI as primary order
 
         if (filters.departamento) query.andWhere('p.dep_id = :dep', { dep: filters.departamento });
@@ -244,7 +245,7 @@ export class ReportsService {
             const cols = [
                 { header: 'N°', width: 25, align: 'center' },
                 { header: 'C.I.', width: 65, align: 'center' },
-                { header: 'NOMBRE COMPLETO', width: 170, align: 'left' },
+                { header: 'NOMBRE POSTULANTE', width: 170, align: 'left' },
                 { header: 'ESFM/UA', width: 110, align: 'left', small: true },
                 { header: 'EQUIPO', width: 45, align: 'center' },
                 { header: 'FIRMA', width: 137, align: 'center' }
@@ -307,12 +308,17 @@ export class ReportsService {
                 // Draw row border
                 doc.rect(margin, currentY, usableWidth, rowHeight).stroke();
 
+                // Concatenate full name
+                const fullName = item.persona
+                    ? `${item.persona.paterno || ''} ${item.persona.materno || ''} ${item.persona.nombre || ''}`.trim()
+                    : '-';
+
                 // Draw cell content
                 xPos = margin;
                 const rowData = [
                     (index + 1).toString(),
                     item.ci,
-                    '', // NOMBRE COMPLETO
+                    fullName.toUpperCase(),
                     item.esfm || '-',
                     item.equipo || '-',
                     ''

@@ -1,12 +1,17 @@
-import { Entity, Column, PrimaryColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, PrimaryColumn, ManyToOne, JoinColumn, OneToOne } from 'typeorm';
 import { Departamento } from './departamento.entity';
 import { Recinto } from './recinto.entity';
+import { DatosPersonales } from './datos-personales.entity';
 
 @Entity('postulacion_esfm')
 export class Postulacion {
     @ManyToOne(() => Departamento)
     @JoinColumn({ name: 'dep_id' })
     departamento: Departamento;
+
+    @OneToOne(() => DatosPersonales)
+    @JoinColumn({ name: 'ci' })
+    persona: DatosPersonales;
 
     @Column({ nullable: true })
     esfm: string;

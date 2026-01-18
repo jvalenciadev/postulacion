@@ -7,9 +7,10 @@ import { ReportsController } from './reports.controller';
 import { ReportsService } from './reports.service';
 import { Departamento } from './entities/departamento.entity';
 import { Recinto } from './entities/recinto.entity';
+import { DatosPersonales } from './entities/datos-personales.entity';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Postulacion, Departamento, Recinto])],
+    imports: [TypeOrmModule.forFeature([Postulacion, Departamento, Recinto, DatosPersonales])],
     controllers: [PostulacionController, ReportsController],
     providers: [PostulacionService, ReportsService],
 })
