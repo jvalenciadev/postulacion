@@ -22,10 +22,10 @@ export class PostulacionService {
 
         return {
             ci: postulante.ci,
-            departamento: postulante.departamento,
+            departamento: postulante.departamento?.dep_nombre || '-',
             esfm: postulante.esfm,
             municipio: postulante.municipio,
-            recinto: postulante.recinto.recinto_nombre,
+            recinto: postulante.recinto?.recinto_nombre || '-',
             direccion_recinto: postulante.direccion,
             fecha: postulante.fecha,
             aula: postulante.aula,
