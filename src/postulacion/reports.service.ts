@@ -96,6 +96,47 @@ export class ReportsService {
         return results.map(r => r.turno).filter(t => t);
     }
 
+    async getStats() {
+        // Total global
+        const total = await this.postulacionRepository.count();
+
+        // Top Departamentos
+        const byDept = await this.postulacionRepository
+            .createQueryBuilder('p')
+            .select('d.dep_nombre', 'label')
+            .addSelect('COUNT(*)', 'count')
+            .innerJoin('p.departamento', 'd')
+            .groupBy('d.dep_nombre')
+            .orderBy('count', 'DESC')
+            .getRawMany();
+
+        // Top ESFM
+        const byEsfm = await this.postulacionRepository
+            .createQueryBuilder('p')
+            .select('p.esfm', 'label')
+            .addSelect('COUNT(*)', 'count')
+            .groupBy('p.esfm')
+            .orderBy('count', 'DESC')
+            .getRawMany();
+
+        // Top Recintos
+        const byRecinto = await this.postulacionRepository
+            .createQueryBuilder('p')
+            .select('r.recinto_nombre', 'label')
+            .addSelect('COUNT(*)', 'count')
+            .innerJoin('p.recinto', 'r')
+            .groupBy('r.recinto_nombre')
+            .orderBy('count', 'DESC')
+            .getRawMany();
+
+        return {
+            total,
+            byDept,
+            byEsfm,
+            byRecinto
+        };
+    }
+
 
     async getReportData(filters: any) {
         const query = this.postulacionRepository.createQueryBuilder('p')

@@ -11,8 +11,13 @@ export class ReportsController {
     @Render('index') // Renders views/index.hbs
     async getReportsPage() {
         const result = await this.reportsService.getFilters();
-        console.log('Filters Data:', JSON.stringify(result)); // Debug log
         return { layout: false, ...result };
+    }
+
+    @Get('stats')
+    @Render('stats')
+    async getStatsPage() {
+        return { layout: false };
     }
 
     @Get('reports/api/departamentos')
@@ -39,6 +44,11 @@ export class ReportsController {
     @Get('reports/api/turnos')
     async getTurnos(@Query('recinto_id') recintoId: number) {
         return await this.reportsService.getTurnosByRecinto(recintoId);
+    }
+
+    @Get('reports/api/stats')
+    async getStats() {
+        return await this.reportsService.getStats();
     }
 
     @Get('reports/api/data')

@@ -205,6 +205,105 @@
                 transform: rotate(360deg);
             }
         }
+
+        /* Stats Dashboard Styles */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            background: rgba(30, 41, 59, 0.6);
+            border-color: var(--primary);
+        }
+
+        .stat-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .icon-blue {
+            background: rgba(99, 102, 241, 0.2);
+            color: #818cf8;
+        }
+
+        .icon-purple {
+            background: rgba(168, 85, 247, 0.2);
+            color: #c084fc;
+        }
+
+        .icon-emerald {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+        }
+
+        .icon-amber {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+            color: var(--text-main);
+            margin-bottom: 10px;
+        }
+
+        .stat-list {
+            list-style: none;
+            font-size: 0.85rem;
+        }
+
+        .stat-list-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            color: var(--text-secondary);
+            padding-bottom: 4px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .stat-list-item:last-child {
+            border: none;
+        }
+
+        .stat-count {
+            color: var(--text-main);
+            font-weight: 600;
+        }
     </style>
 </head>
 
@@ -219,12 +318,65 @@
             <h1 class="hero-title">Reportes Académicos</h1>
             <p style="color: var(--text-secondary); margin-bottom: 20px;">Sistema de gestión de postulantes a las ESFM y
                 Becas</p>
-            <a href="/consultar" class="btn btn-secondary"
-                style="display: inline-flex; text-decoration: none; padding: 10px 25px; border-radius: 12px; align-items: center; justify-content: center;">
-                <i class="fa-solid fa-user-check" style="margin-right: 10px;"></i>
-                Consultar C.I.
-            </a>
+            <div style="display: flex; justify-content: center; gap: 15px;">
+                <a href="/consultar" class="btn btn-secondary"
+                    style="text-decoration: none; padding: 10px 25px; border-radius: 12px; align-items: center; justify-content: center;">
+                    <i class="fa-solid fa-user-check" style="margin-right: 10px;"></i>
+                    Consultar C.I.
+                </a>
+                <a href="/stats" class="btn btn-primary"
+                    style="text-decoration: none; padding: 10px 25px; border-radius: 12px; align-items: center; justify-content: center;">
+                    <i class="fa-solid fa-chart-pie" style="margin-right: 10px;"></i>
+                    Estadísticas Detalladas
+                </a>
+            </div>
         </header>
+
+        <!-- Stats Dashboard -->
+        <div class="stats-grid" id="statsDashboard">
+            <!-- Total Card -->
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-icon icon-blue"><i class="fa-solid fa-users"></i></div>
+                    <div class="stat-label">Total Postulantes</div>
+                </div>
+                <div class="stat-value" id="statTotal">0</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary);">Habilitados a nivel nacional</div>
+            </div>
+
+            <!-- Top Deptos -->
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-icon icon-purple"><i class="fa-solid fa-map-location-dot"></i></div>
+                    <div class="stat-label">Departamentos</div>
+                </div>
+                <div class="stat-list" id="statByDept">
+                    <!-- Dynamic Items -->
+                </div>
+            </div>
+
+            <!-- Top ESFM -->
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-icon icon-emerald"><i class="fa-solid fa-graduation-cap"></i></div>
+                    <div class="stat-label">Top ESFM/UA</div>
+                </div>
+                <div class="stat-list" id="statByEsfm">
+                    <!-- Dynamic Items -->
+                </div>
+            </div>
+
+            <!-- Top Recintos -->
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-icon icon-amber"><i class="fa-solid fa-building-circle-check"></i></div>
+                    <div class="stat-label">Top Recintos</div>
+                </div>
+                <div class="stat-list" id="statByRecinto">
+                    <!-- Dynamic Items -->
+                </div>
+            </div>
+        </div>
 
         <div class="card">
             <form id="reportForm">
@@ -322,14 +474,55 @@
         async function init() {
             try {
                 showLoader(true);
-                const res = await fetch('/reports/api/departamentos');
-                const deps = await res.json();
-                populateSelect(els.dep, deps, 'dep_id', 'dep_nombre');
+                await Promise.all([
+                    loadStats(),
+                    (async () => {
+                        const res = await fetch('/reports/api/departamentos');
+                        const deps = await res.json();
+                        populateSelect(els.dep, deps, 'dep_id', 'dep_nombre');
+                    })()
+                ]);
             } catch (err) {
-                showError('Error al cargar departamentos');
+                showError('Error al iniciar el sistema');
             } finally {
                 showLoader(false);
             }
+        }
+
+        async function loadStats() {
+            try {
+                const res = await fetch('/reports/api/stats');
+                const stats = await res.json();
+
+                document.getElementById('statTotal').textContent = stats.total.toLocaleString();
+
+                renderStatList('statByDept', stats.byDept);
+                renderStatList('statByEsfm', stats.byEsfm);
+                renderStatList('statByRecinto', stats.byRecinto);
+            } catch (err) {
+                console.error('Error loading stats:', err);
+            }
+        }
+
+        function renderStatList(containerId, items) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+
+            if (!items || items.length === 0) {
+                container.innerHTML = '<li class="stat-list-item">Sin datos</li>';
+                return;
+            }
+
+            // Mostramos solo los top 5 en el mini dashboard
+            items.slice(0, 5).forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'stat-list-item';
+                li.innerHTML = `
+                    <span>${item.label || 'Otros'}</span>
+                    <span class="stat-count">${item.count}</span>
+                `;
+                container.appendChild(li);
+            });
         }
 
         // Department change -> load recintos
