@@ -19,10 +19,8 @@ export class PostulacionService {
 
         return {
             ci: postulante.ci,
-            departamento: postulante.departamento,
             esfm: postulante.esfm,
             municipio: postulante.municipio,
-            recinto: postulante.recinto,
             direccion_recinto: postulante.direccion,
             fecha: postulante.fecha,
             aula: postulante.aula,

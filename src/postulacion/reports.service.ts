@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import { Postulacion } from './entities/postulacion.entity';
 import { Departamento } from './entities/departamento.entity';
 import { Recinto } from './entities/recinto.entity';
+import { join } from 'path';
 const PDFDocument: any = require('pdfkit-table');
 
 @Injectable()
@@ -100,7 +101,7 @@ export class ReportsService {
         const query = this.postulacionRepository.createQueryBuilder('p')
             .leftJoinAndSelect('p.departamento', 'd')
             .leftJoinAndSelect('p.recinto', 'r')
-            .orderBy('p.ci', 'ASC'); // Order by CI
+            .orderBy('CAST(p.ci AS UNSIGNED)', 'ASC'); // Numerical sort for CI as primary order
 
         if (filters.departamento) query.andWhere('p.dep_id = :dep', { dep: filters.departamento });
         if (filters.recinto) query.andWhere('p.id_recinto = :rec', { rec: filters.recinto });
@@ -143,6 +144,10 @@ export class ReportsService {
             recintoName = rec?.recinto_nombre || filters.recinto;
         }
 
+        // Get additional info from first record
+        const municipioName = data.length > 0 ? data[0].municipio : '-';
+        const aulaName = filters.aula || (data.length > 0 ? data[0].aula : '-');
+
         const pdfBuffer: Buffer = await new Promise(resolve => {
             const doc = new PDFDocument({
                 size: 'LETTER',
@@ -154,54 +159,95 @@ export class ReportsService {
             const margin = 30;
             const usableWidth = pageWidth - (margin * 2);
 
+            // Function to add background logo
+            const addBackground = () => {
+                const logoPath = join(__dirname, '..', '..', 'public', 'logo.jpg');
+                try {
+                    doc.save();
+                    doc.opacity(1.0); // Fully clear / no transparency
+                    // Cover entire page (0,0 to pageWidth, pageHeight)
+                    doc.image(logoPath, 0, 0, {
+                        width: pageWidth,
+                        height: pageHeight
+                    });
+                    doc.restore();
+                } catch (e) {
+                    console.error('Logo not found at:', logoPath);
+                }
+            };
+
+            // Add background to first page
+            addBackground();
+
+            // Intercept addPage to add background automaticallly
+            const oldAddPage = doc.addPage.bind(doc);
+            doc.addPage = (options?: any) => {
+                const result = oldAddPage(options);
+                addBackground();
+                return result;
+            };
+
             // ==================== HEADER ====================
             doc.font('Helvetica-Bold').fontSize(14);
-            doc.text('LISTA DE INGRESOS Y OBSERVACIONES', margin, 40, {
+            doc.text('ACTA DE INGRESO AL EXAMEN DE ADMISIÓN 2026', margin, 100, {
                 width: usableWidth,
                 align: 'center'
             });
 
             // Line under title
-            doc.moveTo(margin, 65).lineTo(pageWidth - margin, 65).lineWidth(1.5).stroke();
+            doc.moveTo(margin, 125).lineTo(pageWidth - margin, 125).lineWidth(1.5).stroke();
 
             // ==================== INFO BOX ====================
-            let currentY = 75;
+            let currentY = 135;
+            const infoBoxHeight = 65;
 
             // Box
-            doc.rect(margin, currentY, usableWidth, 60).lineWidth(1).stroke();
+            doc.rect(margin, currentY, usableWidth, infoBoxHeight).lineWidth(1).stroke();
 
-            // Content
+            // Row 1: Departamento and Municipio
             doc.font('Helvetica-Bold').fontSize(9);
-            doc.text('RECINTO:', margin + 10, currentY + 10);
+            doc.text('DEPARTAMENTO:', margin + 10, currentY + 10);
             doc.font('Helvetica').fontSize(9);
-            doc.text(recintoName, margin + 70, currentY + 10, { width: 200 });
-
-            doc.font('Helvetica-Bold').fontSize(9);
-            doc.text('AULA:', margin + 300, currentY + 10);
-            doc.font('Helvetica').fontSize(9);
-            doc.text(filters.aula || 'TODAS', margin + 340, currentY + 10);
+            doc.text(deptName.toUpperCase(), margin + 95, currentY + 10);
 
             doc.font('Helvetica-Bold').fontSize(9);
-            doc.text('FECHA:', margin + 10, currentY + 35);
+            doc.text('MUNICIPIO:', margin + 300, currentY + 10);
             doc.font('Helvetica').fontSize(9);
-            doc.text(filters.fecha ? formatDate(filters.fecha) : 'TODAS', margin + 70, currentY + 35);
+            doc.text(municipioName.toUpperCase(), margin + 360, currentY + 10);
+
+            // Row 2: Recinto and Aula
+            doc.font('Helvetica-Bold').fontSize(9);
+            doc.text('RECINTO:', margin + 10, currentY + 28);
+            doc.font('Helvetica').fontSize(9);
+            doc.text(recintoName.toUpperCase(), margin + 95, currentY + 28, { width: 190 });
 
             doc.font('Helvetica-Bold').fontSize(9);
-            doc.text('TURNO:', margin + 300, currentY + 35);
+            doc.text('AULA:', margin + 300, currentY + 28);
             doc.font('Helvetica').fontSize(9);
-            doc.text(filters.turno || 'TODOS', margin + 340, currentY + 35);
+            doc.text(aulaName.toString().toUpperCase(), margin + 360, currentY + 28);
 
-            currentY = 150;
+            // Row 3: Turno and Fecha
+            doc.font('Helvetica-Bold').fontSize(9);
+            doc.text('TURNO:', margin + 10, currentY + 46);
+            doc.font('Helvetica').fontSize(9);
+            doc.text(filters.turno ? filters.turno.toUpperCase() : '-', margin + 95, currentY + 46);
+
+            doc.font('Helvetica-Bold').fontSize(9);
+            doc.text('FECHA:', margin + 300, currentY + 46);
+            doc.font('Helvetica').fontSize(9);
+            doc.text(filters.fecha ? formatDate(filters.fecha) : '-', margin + 360, currentY + 46);
+
+            currentY = 210;
 
             // ==================== TABLE ====================
             // Column configuration
             const cols = [
-                { header: 'N°', width: 30, align: 'center' },
-                { header: 'NOMBRE COMPLETO', width: 180, align: 'left' },
-                { header: 'C.I.', width: 80, align: 'center' },
-                { header: 'FIRMA\nENTRADA', width: 90, align: 'center' },
-                { header: 'FIRMA\nSALIDA', width: 90, align: 'center' },
-                { header: 'OBSERVACIONES', width: 82, align: 'left' }
+                { header: 'N°', width: 25, align: 'center' },
+                { header: 'C.I.', width: 65, align: 'center' },
+                { header: 'NOMBRE COMPLETO', width: 170, align: 'left' },
+                { header: 'ESFM/UA', width: 110, align: 'left', small: true },
+                { header: 'EQUIPO', width: 45, align: 'center' },
+                { header: 'FIRMA', width: 137, align: 'center' }
             ];
 
             const rowHeight = 30; // Increased for more signature space
@@ -234,7 +280,7 @@ export class ReportsService {
                 // Check if we need a new page
                 if (currentY + rowHeight > pageHeight - 150) {
                     doc.addPage();
-                    currentY = 50;
+                    currentY = 100; // Start new pages at the same margin
 
                     // Redraw header on new page
                     xPos = margin;
@@ -265,11 +311,11 @@ export class ReportsService {
                 xPos = margin;
                 const rowData = [
                     (index + 1).toString(),
-                    '', // NOMBRE COMPLETO - blank for manual entry
                     item.ci,
-                    '', // FIRMA ENTRADA
-                    '', // FIRMA SALIDA
-                    ''  // OBSERVACIONES
+                    '', // NOMBRE COMPLETO
+                    item.esfm || '-',
+                    item.equipo || '-',
+                    ''
                 ];
 
                 doc.fillColor('#000');
@@ -279,9 +325,13 @@ export class ReportsService {
                         doc.moveTo(xPos, currentY).lineTo(xPos, currentY + rowHeight).stroke();
                     }
 
-                    doc.text(text, xPos + 3, currentY + 10, {
+                    // Set font size: smaller for ESFM/UA (index 3)
+                    const fontSize = (cols[colIndex] as any).small ? 7 : 9;
+                    doc.fontSize(fontSize);
+
+                    doc.text(text, xPos + 3, currentY + (fontSize === 7 ? 12 : 10), {
                         width: cols[colIndex].width - 6,
-                        align: cols[colIndex].align
+                        align: cols[colIndex].align as any
                     });
                     xPos += cols[colIndex].width;
                 });
@@ -299,14 +349,15 @@ export class ReportsService {
             }
 
             // Box with double border for emphasis
-            doc.rect(margin, currentY, usableWidth, 110).lineWidth(1.5).stroke();
-            doc.rect(margin + 2, currentY + 2, usableWidth - 4, 106).lineWidth(0.5).stroke();
+            const summaryHeight = 145;
+            doc.rect(margin, currentY, usableWidth, summaryHeight).lineWidth(1.5).stroke();
+            doc.rect(margin + 2, currentY + 2, usableWidth - 4, summaryHeight - 4).lineWidth(0.5).stroke();
 
             // Title with background
             doc.rect(margin, currentY, usableWidth, 28).fillAndStroke('#e8e8e8', '#000');
             doc.fillColor('#000');
             doc.font('Helvetica-Bold').fontSize(12);
-            doc.text('RESUMEN', margin + 10, currentY + 10);
+            doc.text('RESUMEN Y FIRMAS DE RESPONSABILIDAD', margin + 10, currentY + 10);
 
             // Counts
             currentY += 35;
@@ -331,17 +382,21 @@ export class ReportsService {
             doc.font('Helvetica').fontSize(10);
             doc.text('________', margin + 470, currentY);
 
-            // Signatures with more space
-            currentY += 28;
-            doc.moveTo(margin, currentY).lineTo(pageWidth - margin, currentY).lineWidth(1).stroke();
+            // Signatures
+            currentY += 35;
+            doc.font('Helvetica-Bold').fontSize(8);
 
-            currentY += 8;
-            doc.font('Helvetica-Bold').fontSize(9);
-            doc.text('NOMBRE Y FIRMA COORDINADOR:', margin + 30, currentY);
-            doc.moveTo(margin + 50, currentY + 20).lineTo(margin + 230, currentY + 20).lineWidth(1).stroke();
+            // Coordinator & Supervisor Row
+            doc.text('NOMBRE Y FIRMA COORDINADOR:', margin + 20, currentY);
+            doc.moveTo(margin + 20, currentY + 25).lineTo(margin + 230, currentY + 25).lineWidth(0.5).stroke();
 
-            doc.text('NOMBRE Y FIRMA SUPERVISOR:', margin + 320, currentY);
-            doc.moveTo(margin + 340, currentY + 20).lineTo(margin + 520, currentY + 20).lineWidth(1).stroke();
+            doc.text('NOMBRE Y FIRMA SUPERVISOR:', margin + 310, currentY);
+            doc.moveTo(margin + 310, currentY + 25).lineTo(margin + 520, currentY + 25).lineWidth(0.5).stroke();
+
+            // Responsible Row
+            currentY += 35;
+            doc.text('COORDINADOR DE AULA (Nombre, Firma y Celular):', margin + 20, currentY);
+            doc.moveTo(margin + 20, currentY + 20).lineTo(pageWidth - margin - 20, currentY + 20).lineWidth(0.5).stroke();
 
             doc.end();
 
