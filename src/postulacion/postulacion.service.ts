@@ -13,7 +13,7 @@ export class PostulacionService {
     async verifyCi(ci: string): Promise<any> {
         const postulante = await this.postulacionRepo.findOne({
             where: { ci },
-            relations: ['recinto']
+            relations: ['departamento', 'recinto']
         });
 
         if (!postulante) {
@@ -22,9 +22,10 @@ export class PostulacionService {
 
         return {
             ci: postulante.ci,
+            departamento: postulante.departamento,
             esfm: postulante.esfm,
             municipio: postulante.municipio,
-            recinto: postulante.recinto?.recinto_nombre || '-',
+            recinto: postulante.recinto,
             direccion_recinto: postulante.direccion,
             fecha: postulante.fecha,
             aula: postulante.aula,
