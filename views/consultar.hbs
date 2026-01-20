@@ -32,10 +32,10 @@
 
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: var(--bg-body);
+            background-color: #050a18;
             background-image:
-                linear-gradient(rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.8)),
-                url('/logo.jpg');
+                linear-gradient(rgba(15, 23, 42, 0.7), rgba(15, 23, 42, 0.7)),
+                url('/consultar_bg.jpeg');
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
@@ -45,18 +45,51 @@
             align-items: center;
             justify-content: center;
             padding: 20px;
+            overflow-x: hidden;
+            animation: bgZoom 30s infinite alternate ease-in-out;
+        }
+
+        @keyframes bgZoom {
+            from {
+                background-scale: 1;
+                transform: scale(1);
+            }
+
+            to {
+                background-scale: 1.1;
+                transform: scale(1.05);
+            }
         }
 
         .consultar-card {
             width: 100%;
             max-width: 500px;
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(20px);
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 24px;
+            border-radius: 30px;
             padding: 40px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            animation: fadeIn 0.6s ease-out;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+            animation: cardFloat 8s infinite ease-in-out;
+            position: relative;
+            z-index: 10;
+        }
+
+        @keyframes cardFloat {
+
+            0%,
+            100% {
+                transform: translateY(0) rotate(0deg);
+            }
+
+            33% {
+                transform: translateY(-10px) rotate(0.5deg);
+            }
+
+            66% {
+                transform: translateY(5px) rotate(-0.5deg);
+            }
         }
 
         @keyframes fadeIn {
@@ -77,26 +110,128 @@
         }
 
         .logo-img {
-            width: 350px;
+            max-width: 320px;
+            width: 100%;
             height: auto;
-            margin-bottom: 20px;
-            border-radius: 15px;
-            filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.3));
+            margin: 0 auto;
+            border-radius: 12px;
+            filter: drop-shadow(0 0 15px rgba(99, 102, 241, 0.4));
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: logoFloat 5s infinite ease-in-out;
+            cursor: pointer;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            /* Soft background for better contrast */
+            backdrop-filter: blur(5px);
         }
 
-        .title {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.8rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 8px;
+        .logo-img:hover {
+            transform: scale(1.05) translateY(-8px) rotate(1deg);
+            filter: drop-shadow(0 0 25px rgba(99, 102, 241, 0.7)) brightness(1.2);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        @keyframes logoFloat {
+
+            0%,
+            100% {
+                transform: translateY(0) rotate(0deg);
+            }
+
+            50% {
+                transform: translateY(-12px) rotate(-1deg);
+            }
+        }
+
+        /* Shine effect container */
+        .logo-container {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            overflow: hidden;
+            border-radius: 20px;
+            margin-bottom: 25px;
+        }
+
+        .logo-container::after {
+            content: '';
+            position: absolute;
+            top: -100%;
+            left: -100%;
+            width: 300%;
+            height: 300%;
+            background: linear-gradient(45deg,
+                    transparent 0%,
+                    rgba(255, 255, 255, 0) 45%,
+                    rgba(255, 255, 255, 0.3) 50%,
+                    rgba(255, 255, 255, 0) 55%,
+                    transparent 100%);
+            transform: rotate(45deg);
+            pointer-events: none;
+            animation: logoShine 8s infinite ease-in-out;
+        }
+
+        @keyframes logoShine {
+            0% {
+                left: -150%;
+                top: -150%;
+            }
+
+            20%,
+            100% {
+                left: 150%;
+                top: 150%;
+            }
         }
 
         .subtitle {
             color: var(--text-secondary);
             font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+
+        .title {
+            transition: all 0.3s ease;
+        }
+
+        /* Dynamic Animations */
+        @keyframes pulse-logo {
+            0% {
+                transform: scale(1);
+                filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.3));
+            }
+
+            50% {
+                transform: scale(1.05);
+                filter: drop-shadow(0 0 20px rgba(99, 102, 241, 0.6));
+            }
+
+            100% {
+                transform: scale(1);
+                filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.3));
+            }
+        }
+
+        .searching-logo {
+            animation: pulse-logo 1.5s infinite ease-in-out;
+        }
+
+        .header-fade {
+            animation: fadeInText 0.5s ease-in-out;
+        }
+
+        @keyframes fadeInText {
+            from {
+                opacity: 0;
+                transform: translateY(-5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .search-box {
@@ -249,10 +384,12 @@
 <body>
 
     <div class="consultar-card">
-        <div class="header">
-            <img src="/logo_minedu.png" alt="Logo" class="logo-img">
-            <h1 class="title">Consulta tu Estado</h1>
-            <p class="subtitle">Ingresa tu número de C.I. para verificar</p>
+        <div class="header" id="headerSection">
+            <div class="logo-container">
+                <img src="/logo_minedu.png" alt="Logo" class="logo-img" id="mainLogo">
+            </div>
+            <h1 class="title" id="mainTitle">Consulta tu Estado</h1>
+            <p class="subtitle" id="mainSubtitle">Ingresa tu número de C.I. para verificar</p>
         </div>
 
         <form id="searchForm">
@@ -333,12 +470,20 @@
             const resultBox = document.getElementById('resultContainer');
             const errorBox = document.getElementById('errorMsg');
 
-            // Reset UI
+            const mainTitle = document.getElementById('mainTitle');
+            const mainSubtitle = document.getElementById('mainSubtitle');
+            const mainLogo = document.getElementById('mainLogo');
+
+            // UI Feedback: Searching
             errorBox.style.display = 'none';
             resultBox.classList.remove('active');
             btn.disabled = true;
             btnText.style.display = 'none';
             loader.style.display = 'block';
+
+            mainLogo.classList.add('searching-logo');
+            mainTitle.textContent = 'Buscando...';
+            mainSubtitle.textContent = 'Estamos verificando tus datos en el sistema';
 
             try {
                 // Realizamos el POST a la raíz (/) con la API KEY configurada
@@ -354,8 +499,15 @@
                 const data = await response.json();
 
                 if (!response.ok) {
+                    mainTitle.textContent = 'Oops...';
+                    mainSubtitle.textContent = 'Hubo un problema con la consulta';
                     throw new Error(data.message || 'Error en la consulta');
                 }
+
+                // UI Feedback: Found
+                mainTitle.classList.add('header-fade');
+                mainTitle.textContent = '¡Datos Encontrados!';
+                mainSubtitle.textContent = `Bienvenido(a), ${data.nombre_completo.split(',')[1] || data.nombre_completo}`;
 
                 // Poblar datos
                 document.getElementById('resNombre').textContent = data.nombre_completo || '-';
@@ -384,12 +536,15 @@
                 resultBox.classList.add('active');
 
             } catch (err) {
+                mainTitle.textContent = 'No Encontrado';
+                mainSubtitle.textContent = 'Verifica tu C.I. e intenta nuevamente';
                 errorBox.textContent = err.message;
                 errorBox.style.display = 'block';
             } finally {
                 btn.disabled = false;
                 btnText.style.display = 'block';
                 loader.style.display = 'none';
+                mainLogo.classList.remove('searching-logo');
             }
         });
     </script>
