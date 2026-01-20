@@ -37,7 +37,13 @@ export class ReportsService {
     async getRecintosByDepartamento(depId: number) {
         try {
             console.log(`[ReportsService] Fetching recintos for dep_id=${depId}`);
-            // Query recinto table directly - it has dep_id column
+            // Query recinto table directly - it has dep_id column.
+            // Note: Recintos are agnostic of tipo_postulacion mostly, but if we need to filter recintos that ONLY have becas vs esfm, 
+            // we would need to join with postulacion.
+            // For now, let's return all recintos for the dep, as a recinct can be used for both.
+            // However, to be strict as requested, maybe we can filter those that have at least one postulacion of the type.
+            // But let's keep it simple first as per standard behavior unless requested otherwise.
+            // Actually, user wants "replícalo", so context matters. Let's assume recintos are shared for now.
             const recintos = await this.recintoRepository.find({
                 where: { dep_id: depId }
             });
@@ -49,12 +55,21 @@ export class ReportsService {
         }
     }
 
-    async getFechasByRecinto(recintoId: number) {
-        const results = await this.postulacionRepository
+    async getFechasByRecinto(recintoId: number, tipoPostulacion?: string) {
+        const query = this.postulacionRepository
             .createQueryBuilder('p')
             .select('DISTINCT p.fecha', 'fecha')
-            .where('p.id_recinto = :recintoId', { recintoId })
-            .getRawMany();
+            .where('p.id_recinto = :recintoId', { recintoId });
+
+        if (tipoPostulacion === 'Becas') {
+            query.andWhere("p.tipo_postulacion = 'Becas'");
+        } else {
+            // For ESFM, assume null or 'ESFM' (standardize on null/empty usually for legacy)
+            // But let's be safe: (tipo_postulacion IS NULL OR tipo_postulacion != 'Becas')
+            query.andWhere("(p.tipo_postulacion IS NULL OR p.tipo_postulacion != 'Becas')");
+        }
+
+        const results = await query.getRawMany();
 
         // Return objects with both display (formatted) and value (raw) for filtering
         return results.map(r => {
@@ -74,60 +89,89 @@ export class ReportsService {
         }).filter(f => f);
     }
 
-    async getAulasByRecinto(recintoId: number) {
-        const results = await this.postulacionRepository
+    async getAulasByRecinto(recintoId: number, tipoPostulacion?: string) {
+        const query = this.postulacionRepository
             .createQueryBuilder('p')
             .select('DISTINCT p.aula', 'aula')
             .where('p.id_recinto = :recintoId', { recintoId })
-            .andWhere('p.aula IS NOT NULL')
-            .getRawMany();
+            .andWhere('p.aula IS NOT NULL');
+
+        if (tipoPostulacion === 'Becas') {
+            query.andWhere("p.tipo_postulacion = 'Becas'");
+        } else {
+            query.andWhere("(p.tipo_postulacion IS NULL OR p.tipo_postulacion != 'Becas')");
+        }
+
+        const results = await query.getRawMany();
 
         return results.map(r => r.aula).filter(a => a);
     }
 
-    async getTurnosByRecinto(recintoId: number) {
-        const results = await this.postulacionRepository
+    async getTurnosByRecinto(recintoId: number, tipoPostulacion?: string) {
+        const query = this.postulacionRepository
             .createQueryBuilder('p')
             .select('DISTINCT p.turno', 'turno')
             .where('p.id_recinto = :recintoId', { recintoId })
-            .andWhere('p.turno IS NOT NULL')
-            .getRawMany();
+            .andWhere('p.turno IS NOT NULL');
+
+        if (tipoPostulacion === 'Becas') {
+            query.andWhere("p.tipo_postulacion = 'Becas'");
+        } else {
+            query.andWhere("(p.tipo_postulacion IS NULL OR p.tipo_postulacion != 'Becas')");
+        }
+
+        const results = await query.getRawMany();
 
         return results.map(r => r.turno).filter(t => t);
     }
 
-    async getStats() {
+    async getStats(tipoPostulacion?: string) {
+        // Helper to apply filter
+        const applyFilter = (q: any) => {
+            if (tipoPostulacion === 'Becas') {
+                q.andWhere("p.tipo_postulacion = 'Becas'");
+            } else {
+                q.andWhere("(p.tipo_postulacion IS NULL OR p.tipo_postulacion != 'Becas')");
+            }
+            return q;
+        };
+
         // Total global
-        const total = await this.postulacionRepository.count();
+        const totalQuery = this.postulacionRepository.createQueryBuilder('p');
+        applyFilter(totalQuery);
+        const total = await totalQuery.getCount();
 
         // Top Departamentos
-        const byDept = await this.postulacionRepository
+        const byDeptQuery = this.postulacionRepository
             .createQueryBuilder('p')
             .select('d.dep_nombre', 'label')
             .addSelect('COUNT(*)', 'count')
             .innerJoin('p.departamento', 'd')
             .groupBy('d.dep_nombre')
-            .orderBy('count', 'DESC')
-            .getRawMany();
+            .orderBy('count', 'DESC');
+        applyFilter(byDeptQuery);
+        const byDept = await byDeptQuery.getRawMany();
 
         // Top ESFM
-        const byEsfm = await this.postulacionRepository
+        const byEsfmQuery = this.postulacionRepository
             .createQueryBuilder('p')
             .select('p.esfm', 'label')
             .addSelect('COUNT(*)', 'count')
             .groupBy('p.esfm')
-            .orderBy('count', 'DESC')
-            .getRawMany();
+            .orderBy('count', 'DESC');
+        applyFilter(byEsfmQuery);
+        const byEsfm = await byEsfmQuery.getRawMany();
 
         // Top Recintos
-        const byRecinto = await this.postulacionRepository
+        const byRecintoQuery = this.postulacionRepository
             .createQueryBuilder('p')
             .select('r.recinto_nombre', 'label')
             .addSelect('COUNT(*)', 'count')
             .innerJoin('p.recinto', 'r')
             .groupBy('r.recinto_nombre')
-            .orderBy('count', 'DESC')
-            .getRawMany();
+            .orderBy('count', 'DESC');
+        applyFilter(byRecintoQuery);
+        const byRecinto = await byRecintoQuery.getRawMany();
 
         return {
             total,
@@ -155,6 +199,8 @@ export class ReportsService {
         }
         if (filters.aula) query.andWhere('p.aula = :aula', { aula: filters.aula });
         if (filters.turno) query.andWhere('p.turno = :turno', { turno: filters.turno });
+        if (filters.ci) query.andWhere('p.ci = :ci', { ci: filters.ci });
+        if (filters.tipo_postulacion) query.andWhere('p.tipoPostulacion = :tipo', { tipo: filters.tipo_postulacion });
 
         return await query.getMany();
     }

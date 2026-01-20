@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consulta de Postulación - Becas</title>
+
+    <!-- Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-body: #0f172a;
+            --surface-card: #1e293b;
+            --primary: #8b5cf6;
+            /* Morado diferente para diferenciar Becas */
+            --accent: #d946ef;
+            --text-main: #f8fafc;
+            --text-secondary: #94a3b8;
+            --border-color: #334155;
+            --success: #10b981;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #050a18;
+            background-image:
+                linear-gradient(rgba(15, 23, 42, 0.7), rgba(15, 23, 42, 0.7)),
+                url('/consultar_bg.jpeg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-x: hidden;
+            animation: bgZoom 30s infinite alternate ease-in-out;
+        }
+
+        @keyframes bgZoom {
+            from {
+                background-scale: 1;
+                transform: scale(1);
+            }
+
+            to {
+                background-scale: 1.1;
+                transform: scale(1.05);
+            }
+        }
+
+        .consultar-card {
+            width: 100%;
+            max-width: 500px;
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 30px;
+            padding: 40px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+            animation: cardFloat 8s infinite ease-in-out;
+            position: relative;
+            z-index: 10;
+        }
+
+        @keyframes cardFloat {
+
+            0%,
+            100% {
+                transform: translateY(0) rotate(0deg);
+            }
+
+            33% {
+                transform: translateY(-10px) rotate(0.5deg);
+            }
+
+            66% {
+                transform: translateY(5px) rotate(-0.5deg);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo-img {
+            max-width: 320px;
+            width: 100%;
+            height: auto;
+            margin: 0 auto;
+            border-radius: 12px;
+            filter: drop-shadow(0 0 15px rgba(139, 92, 246, 0.4));
+            /* Adjusted color */
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: logoFloat 5s infinite ease-in-out;
+            cursor: pointer;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(5px);
+        }
+
+        .logo-img:hover {
+            transform: scale(1.05) translateY(-8px) rotate(1deg);
+            filter: drop-shadow(0 0 25px rgba(139, 92, 246, 0.7)) brightness(1.2);
+            /* Adjusted color */
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        @keyframes logoFloat {
+
+            0%,
+            100% {
+                transform: translateY(0) rotate(0deg);
+            }
+
+            50% {
+                transform: translateY(-12px) rotate(-1deg);
+            }
+        }
+
+        /* Shine effect container */
+        .logo-container {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            overflow: hidden;
+            border-radius: 20px;
+            margin-bottom: 25px;
+        }
+
+        .logo-container::after {
+            content: '';
+            position: absolute;
+            top: -100%;
+            left: -100%;
+            width: 300%;
+            height: 300%;
+            background: linear-gradient(45deg,
+                    transparent 0%,
+                    rgba(255, 255, 255, 0) 45%,
+                    rgba(255, 255, 255, 0.3) 50%,
+                    rgba(255, 255, 255, 0) 55%,
+                    transparent 100%);
+            transform: rotate(45deg);
+            pointer-events: none;
+            animation: logoShine 8s infinite ease-in-out;
+        }
+
+        @keyframes logoShine {
+            0% {
+                left: -150%;
+                top: -150%;
+            }
+
+            20%,
+            100% {
+                left: 150%;
+                top: 150%;
+            }
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+
+        .title {
+            transition: all 0.3s ease;
+            font-size: 1.5rem;
+            /* Slightly smaller to fit long title if needed */
+        }
+
+        /* Dynamic Animations */
+        @keyframes pulse-logo {
+            0% {
+                transform: scale(1);
+                filter: drop-shadow(0 0 10px rgba(139, 92, 246, 0.3));
+            }
+
+            50% {
+                transform: scale(1.05);
+                filter: drop-shadow(0 0 20px rgba(139, 92, 246, 0.6));
+            }
+
+            100% {
+                transform: scale(1);
+                filter: drop-shadow(0 0 10px rgba(139, 92, 246, 0.3));
+            }
+        }
+
+        .searching-logo {
+            animation: pulse-logo 1.5s infinite ease-in-out;
+        }
+
+        .header-fade {
+            animation: fadeInText 0.5s ease-in-out;
+        }
+
+        @keyframes fadeInText {
+            from {
+                opacity: 0;
+                transform: translateY(-5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .search-box {
+            position: relative;
+            margin-bottom: 25px;
+        }
+
+        .search-input {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            border: 2px solid var(--border-color);
+            border-radius: 16px;
+            padding: 16px 20px;
+            padding-left: 50px;
+            color: white;
+            font-size: 1.1rem;
+            transition: all 0.3s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.2);
+            background: rgba(15, 23, 42, 0.8);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+        }
+
+        .btn-search {
+            width: 100%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            padding: 16px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-search:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(139, 92, 246, 0.4);
+        }
+
+        .btn-search:active {
+            transform: translateY(0);
+        }
+
+        .result-container {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .result-container.active {
+            display: block;
+            animation: slideUp 0.4s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .status-badge {
+            display: inline-block;
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+            padding: 6px 16px;
+            border-radius: 100px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+
+        .result-grid {
+            display: grid;
+            gap: 15px;
+        }
+
+        .info-item {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .info-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .info-value {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-main);
+        }
+
+        .loader {
+            display: none;
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .error-msg {
+            color: #ef4444;
+            text-align: center;
+            margin-top: 15px;
+            font-size: 0.9rem;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="consultar-card">
+        <div class="header" id="headerSection">
+            <div class="logo-container">
+                <img src="/logo_minedu.png" alt="Logo" class="logo-img" id="mainLogo">
+            </div>
+            <!-- Título modificado para Becas -->
+            <h1 class="title" id="mainTitle">Reportes Académicos</h1>
+            <p class="subtitle" id="mainSubtitle">Sistema de gestión de postulantes a las ESFM y Becas</p>
+        </div>
+
+        <form id="searchForm">
+            <div class="search-box">
+                <i class="fa-solid fa-id-card search-icon"></i>
+                <input type="text" id="ciInput" class="search-input" placeholder="Ingresa C.I. para Beca" required>
+            </div>
+
+            <button type="submit" class="btn-search" id="submitBtn">
+                <span id="btnText">Consultar Beca</span>
+                <div class="loader" id="btnLoader"></div>
+            </button>
+        </form>
+
+        <div id="errorMsg" class="error-msg"></div>
+
+        <div class="result-container" id="resultContainer">
+            <div style="text-align: center;">
+                <div class="status-badge" id="statusBadge">HABILITADO</div>
+            </div>
+
+            <div class="result-grid">
+                <div class="info-item">
+                    <div class="info-label">Tipo Postulación</div>
+                    <div class="info-value" id="resTipo" style="color: var(--accent); font-weight: 700;"></div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Postulante</div>
+                    <div class="info-value" id="resNombre" style="color: var(--primary); font-weight: 700;"></div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Discapacidad</div>
+                    <div class="info-value" id="resDiscapacidad"></div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Departamento</div>
+                    <div class="info-value" id="resDep"></div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">ESFM / UA</div>
+                    <div class="info-value" id="resEsfm"></div>
+                </div>
+                <!-- ... otros campos ... -->
+                <div class="info-item">
+                    <div class="info-label">Municipio</div>
+                    <div class="info-value" id="resMun"></div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Recinto</div>
+                    <div class="info-value" id="resRecinto"></div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Dirección</div>
+                    <div class="info-value" id="resDir"></div>
+                </div>
+                <div class="info-item" style="display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <div class="info-label">Aula</div>
+                        <div class="info-value" id="resAula"></div>
+                        <div class="info-label">Fecha</div>
+                        <div class="info-value" id="resFecha"></div>
+                    </div>
+                    <div style="flex: 1;">
+                        <div class="info-label">Turno</div>
+                        <div class="info-value" id="resTurno"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        document.getElementById('searchForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const ci = document.getElementById('ciInput').value;
+            const btn = document.getElementById('submitBtn');
+            const btnText = document.getElementById('btnText');
+            const loader = document.getElementById('btnLoader');
+            const resultBox = document.getElementById('resultContainer');
+            const errorBox = document.getElementById('errorMsg');
+
+            const mainTitle = document.getElementById('mainTitle');
+            const mainSubtitle = document.getElementById('mainSubtitle');
+            const mainLogo = document.getElementById('mainLogo');
+
+            // UI Feedback: Searching
+            errorBox.style.display = 'none';
+            resultBox.classList.remove('active');
+            btn.disabled = true;
+            btnText.style.display = 'none';
+            loader.style.display = 'block';
+
+            mainLogo.classList.add('searching-logo');
+            mainTitle.textContent = 'Buscando Beca...';
+            mainSubtitle.textContent = 'Verificando datos de beca en el sistema';
+
+            try {
+                // Realizamos el POST a la ruta de verificación de becas
+                const response = await fetch('/verificar-becas', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': '3fb1cGsvXeiuZFamH57M0or63vJEv7zsPanFBjhO'
+                    },
+                    body: JSON.stringify({ ci })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    mainTitle.textContent = 'Sin Datos de Beca';
+                    mainSubtitle.textContent = 'No se encontró registro para Becas';
+                    throw new Error(data.message || 'Error en la consulta');
+                }
+
+                // UI Feedback: Found
+                mainTitle.classList.add('header-fade');
+                mainTitle.textContent = '¡Beca Encontrada!';
+                mainSubtitle.textContent = `Postulante: ${data.nombre_completo.split(',')[1] || data.nombre_completo}`;
+
+                // Poblar datos
+                document.getElementById('resNombre').textContent = data.nombre_completo || '-';
+                document.getElementById('resDiscapacidad').textContent = data.discapacidad || 'Ninguna';
+                document.getElementById('resTipo').textContent = data.tipo_postulacion || 'Becas';
+                document.getElementById('resDep').textContent = data.departamento || '-';
+                document.getElementById('resEsfm').textContent = data.esfm || '-';
+                document.getElementById('resMun').textContent = data.municipio || '-';
+                document.getElementById('resRecinto').textContent = data.recinto || '-';
+                document.getElementById('resDir').textContent = data.direccion_recinto || '-';
+                document.getElementById('resAula').textContent = data.aula || '-';
+                // Convert to number for Equipo if it's numeric 
+                document.getElementById('resEq').textContent = data.equipo || '-';
+                document.getElementById('resTurno').textContent = data.turno || '-';
+
+                // Formatear fecha
+                if (data.fecha) {
+                    try {
+                        const date = new Date(data.fecha);
+                        const options = { day: '2-digit', month: '2-digit', year: 'numeric' };
+                        document.getElementById('resFecha').textContent = date.toLocaleDateString('es-ES', options);
+                    } catch {
+                        document.getElementById('resFecha').textContent = data.fecha;
+                    }
+                } else {
+                    document.getElementById('resFecha').textContent = '-';
+                }
+
+                resultBox.classList.add('active');
+
+            } catch (err) {
+                mainTitle.textContent = 'No Encontrado';
+                mainSubtitle.textContent = 'Verifica el C.I. para Beca e intenta nuevamente';
+                errorBox.textContent = err.message;
+                errorBox.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btnText.style.display = 'block';
+                loader.style.display = 'none';
+                mainLogo.classList.remove('searching-logo');
+            }
+        });
+
+        });
+    </script>
+</body>
+
+</html>

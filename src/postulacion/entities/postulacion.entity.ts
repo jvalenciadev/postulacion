@@ -38,6 +38,12 @@ export class Postulacion {
     @Column({ nullable: true })
     equipo: string;
 
+    @Column({ nullable: true })
+    discapacidad: string;
+
+    @Column({ name: 'tipo_postulacion', nullable: true })
+    tipoPostulacion: string;
+
     @PrimaryColumn()
     ci: string;
 }

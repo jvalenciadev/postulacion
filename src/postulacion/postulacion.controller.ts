@@ -17,4 +17,16 @@ export class PostulacionController {
     getConsultarPage() {
         return { layout: false };
     }
+
+    @Post('verificar-becas')
+    @UseGuards(ApiKeyGuard)
+    verifyBecas(@Body('ci') ci: string) {
+        return this.postulacionService.verifyCiBecas(ci);
+    }
+
+    @Get('consultarBecas')
+    @Render('consultar_becas')
+    getConsultarBecasPage() {
+        return { layout: false };
+    }
 }
