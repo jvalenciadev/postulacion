@@ -543,6 +543,27 @@
                     document.getElementById('resFecha').textContent = '-';
                 }
 
+                // Fecha logic for highlight
+                const resFechaEl = document.getElementById('resFecha');
+                resFechaEl.style.color = 'var(--text-main)'; // Reset default
+
+                if (data.fecha) {
+                    try {
+                        // Create dates at midnight to compare strictly by YYYY-MM-DD
+                        const examDate = new Date(data.fecha);
+                        const today = new Date();
+
+                        examDate.setHours(0, 0, 0, 0);
+                        today.setHours(0, 0, 0, 0);
+
+                        if (examDate.getTime() === today.getTime()) {
+                            resFechaEl.style.color = '#fff000'; // Uplifting Yellow for Alert/Today
+                            resFechaEl.style.fontWeight = '700';
+                            resFechaEl.innerHTML += ' <i class="fa-solid fa-circle-exclamation" style="margin-left:5px; color:#fff000;"></i>';
+                        }
+                    } catch (e) { console.error(e) }
+                }
+
                 resultBox.classList.add('active');
 
             } catch (err) {

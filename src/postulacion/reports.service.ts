@@ -279,7 +279,12 @@ export class ReportsService {
 
             // ==================== HEADER ====================
             doc.font('Helvetica-Bold').fontSize(14);
-            doc.text('ACTA DE INGRESO AL EXAMEN DE ADMISIÓN 2026', margin, 100, {
+
+            const pdfTitle = filters.tipo_postulacion === 'Becas'
+                ? 'ACTA DE INGRESO AL EXAMEN DE BECAS 2026'
+                : 'ACTA DE INGRESO AL EXAMEN DE ADMISIÓN 2026';
+
+            doc.text(pdfTitle, margin, 100, {
                 width: usableWidth,
                 align: 'center'
             });
