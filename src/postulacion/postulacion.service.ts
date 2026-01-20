@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, IsNull } from 'typeorm';
 import { Postulacion } from './entities/postulacion.entity';
 
 @Injectable()
@@ -11,10 +11,16 @@ export class PostulacionService {
     ) { }
 
     async verifyCi(ci: string): Promise<any> {
-        const postulante = await this.postulacionRepo.findOne({
-            where: { ci },
+        let postulante = await this.postulacionRepo.findOne({
+            where: { ci, tipoPostulacion: IsNull() },
             relations: ['departamento', 'recinto', 'persona']
         });
+
+        // Double check against 'Becas' string if DB has strings
+        if (postulante && postulante.tipoPostulacion === 'Becas') {
+            // Treat as not found for this endpoint
+            postulante = null;
+        }
 
         if (!postulante) {
             throw new NotFoundException('CI no encontrado o no habilitado');

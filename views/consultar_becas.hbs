@@ -460,6 +460,8 @@
                     <div style="flex: 1;">
                         <div class="info-label">Turno</div>
                         <div class="info-value" id="resTurno"></div>
+                        <div class="info-label" style="margin-top: 5px;">Equipo</div>
+                        <div class="info-value" id="resEq"></div>
                     </div>
                 </div>
             </div>
@@ -518,7 +520,18 @@
 
                 // Poblar datos
                 document.getElementById('resNombre').textContent = data.nombre_completo || '-';
-                document.getElementById('resDiscapacidad').textContent = data.discapacidad || 'Ninguna';
+
+                // Discapacidad logic
+                const discVal = data.discapacidad || 'Ninguna';
+                const elDisc = document.getElementById('resDiscapacidad');
+                elDisc.textContent = discVal;
+                if (discVal !== 'Ninguna' && discVal !== '-') {
+                    elDisc.style.color = '#fbbf24'; // Amber/Yellow warning
+                    elDisc.style.fontWeight = '700';
+                } else {
+                    elDisc.style.color = 'var(--text-main)';
+                }
+
                 document.getElementById('resTipo').textContent = data.tipo_postulacion || 'Becas';
                 document.getElementById('resDep').textContent = data.departamento || '-';
                 document.getElementById('resEsfm').textContent = data.esfm || '-';
