@@ -1,7 +1,7 @@
 
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Between } from 'typeorm';
 import { Postulacion } from './entities/postulacion.entity';
 import { Departamento } from './entities/departamento.entity';
 import { Recinto } from './entities/recinto.entity';
@@ -37,13 +37,6 @@ export class ReportsService {
     async getRecintosByDepartamento(depId: number) {
         try {
             console.log(`[ReportsService] Fetching recintos for dep_id=${depId}`);
-            // Query recinto table directly - it has dep_id column.
-            // Note: Recintos are agnostic of tipo_postulacion mostly, but if we need to filter recintos that ONLY have becas vs esfm, 
-            // we would need to join with postulacion.
-            // For now, let's return all recintos for the dep, as a recinct can be used for both.
-            // However, to be strict as requested, maybe we can filter those that have at least one postulacion of the type.
-            // But let's keep it simple first as per standard behavior unless requested otherwise.
-            // Actually, user wants "replícalo", so context matters. Let's assume recintos are shared for now.
             const recintos = await this.recintoRepository.find({
                 where: { dep_id: depId }
             });
@@ -64,14 +57,11 @@ export class ReportsService {
         if (tipoPostulacion === 'Becas') {
             query.andWhere("p.tipo_postulacion = 'Becas'");
         } else {
-            // For ESFM, assume null or 'ESFM' (standardize on null/empty usually for legacy)
-            // But let's be safe: (tipo_postulacion IS NULL OR tipo_postulacion != 'Becas')
             query.andWhere("(p.tipo_postulacion IS NULL OR p.tipo_postulacion != 'Becas')");
         }
 
         const results = await query.getRawMany();
 
-        // Return objects with both display (formatted) and value (raw) for filtering
         return results.map(r => {
             if (!r.fecha) return null;
             try {
@@ -81,7 +71,7 @@ export class ReportsService {
                 const year = date.getFullYear();
                 return {
                     display: `${day}/${month}/${year}`,
-                    value: r.fecha // Keep original for filtering
+                    value: r.fecha
                 };
             } catch {
                 return { display: r.fecha, value: r.fecha };
@@ -126,7 +116,6 @@ export class ReportsService {
     }
 
     async getStats(tipoPostulacion?: string) {
-        // Helper to apply filter
         const applyFilter = (q: any) => {
             if (tipoPostulacion === 'Becas') {
                 q.andWhere("p.tipo_postulacion = 'Becas'");
@@ -136,12 +125,10 @@ export class ReportsService {
             return q;
         };
 
-        // Total global
         const totalQuery = this.postulacionRepository.createQueryBuilder('p');
         applyFilter(totalQuery);
         const total = await totalQuery.getCount();
 
-        // Top Departamentos
         const byDeptQuery = this.postulacionRepository
             .createQueryBuilder('p')
             .select('d.dep_nombre', 'label')
@@ -152,7 +139,6 @@ export class ReportsService {
         applyFilter(byDeptQuery);
         const byDept = await byDeptQuery.getRawMany();
 
-        // Top ESFM
         const byEsfmQuery = this.postulacionRepository
             .createQueryBuilder('p')
             .select('p.esfm', 'label')
@@ -162,7 +148,6 @@ export class ReportsService {
         applyFilter(byEsfmQuery);
         const byEsfm = await byEsfmQuery.getRawMany();
 
-        // Top Recintos
         const byRecintoQuery = this.postulacionRepository
             .createQueryBuilder('p')
             .select('r.recinto_nombre', 'label')
@@ -186,21 +171,33 @@ export class ReportsService {
         const query = this.postulacionRepository.createQueryBuilder('p')
             .leftJoinAndSelect('p.departamento', 'd')
             .leftJoinAndSelect('p.recinto', 'r')
-            .leftJoinAndSelect('p.persona', 'pers')
-            .orderBy('pers.paterno', 'ASC')
-            .addOrderBy('pers.materno', 'ASC')
-            .addOrderBy('pers.nombre', 'ASC');
+            .leftJoinAndSelect('p.persona', 'pers');
+
+        // Always sort by nombre_completo if available, or concatenated name parts
+        if (filters.tipo_postulacion === 'compulsa') {
+            query.orderBy('pers.nombre_completo', 'ASC');
+        } else {
+            query.orderBy('pers.paterno', 'ASC')
+                .addOrderBy('pers.materno', 'ASC')
+                .addOrderBy('pers.nombre', 'ASC');
+        }
 
         if (filters.departamento) query.andWhere('p.dep_id = :dep', { dep: filters.departamento });
         if (filters.recinto) query.andWhere('p.id_recinto = :rec', { rec: filters.recinto });
         if (filters.fecha) {
-            // Use DATE() to compare only date part, ignoring time
             query.andWhere('DATE(p.fecha) = DATE(:fecha)', { fecha: filters.fecha });
         }
         if (filters.aula) query.andWhere('p.aula = :aula', { aula: filters.aula });
         if (filters.turno) query.andWhere('p.turno = :turno', { turno: filters.turno });
         if (filters.ci) query.andWhere('p.ci = :ci', { ci: filters.ci });
         if (filters.tipo_postulacion) query.andWhere('p.tipoPostulacion = :tipo', { tipo: filters.tipo_postulacion });
+
+        // Deduplication for Compulsas
+        if (filters.tipo_postulacion === 'compulsa') {
+            const start = new Date('2026-01-28T00:00:00');
+            const end = new Date('2026-01-28T23:59:59');
+            query.andWhere('pers.fecha_actualizado BETWEEN :start AND :end', { start, end });
+        }
 
         return await query.getMany();
     }
@@ -235,18 +232,18 @@ export class ReportsService {
         }
 
         // Get additional info from first record
-        const municipioName = data.length > 0 ? data[0].municipio : '-';
-        const aulaName = filters.aula || (data.length > 0 ? data[0].aula : '-');
+        const esfmName = data.length > 0 ? (data[0].esfm || '-') : '-';
+        const aulaName = filters.aula || (data.length > 0 ? data[1].aula : '-');
 
         const pdfBuffer: Buffer = await new Promise(resolve => {
             const doc = new PDFDocument({
                 size: 'LETTER',
-                margin: 30
+                margin: 40
             });
 
             const pageWidth = 612;
             const pageHeight = 792;
-            const margin = 30;
+            const margin = 40;
             const usableWidth = pageWidth - (margin * 2);
 
             // Function to add background logo
@@ -254,8 +251,7 @@ export class ReportsService {
                 const logoPath = join(__dirname, '..', '..', 'public', 'logo.jpg');
                 try {
                     doc.save();
-                    doc.opacity(1.0); // Fully clear / no transparency
-                    // Cover entire page (0,0 to pageWidth, pageHeight)
+                    doc.opacity(1.0);
                     doc.image(logoPath, 0, 0, {
                         width: pageWidth,
                         height: pageHeight
@@ -266,10 +262,8 @@ export class ReportsService {
                 }
             };
 
-            // Add background to first page
             addBackground();
 
-            // Intercept addPage to add background automaticallly
             const oldAddPage = doc.addPage.bind(doc);
             doc.addPage = (options?: any) => {
                 const result = oldAddPage(options);
@@ -278,160 +272,139 @@ export class ReportsService {
             };
 
             // ==================== HEADER ====================
-            doc.font('Helvetica-Bold').fontSize(14);
+            let currentY = 100; // Padding to avoid logo overlap
+            doc.font('Helvetica-Bold').fontSize(12).fillColor('#000');
 
-            const pdfTitle = filters.tipo_postulacion === 'Becas'
-                ? 'ACTA DE INGRESO AL EXAMEN DE BECAS 2026'
-                : 'ACTA DE INGRESO AL EXAMEN DE ADMISIÓN 2026';
+            let pdfTitle = 'ADMISIÓN DE POSTULANTES A LAS ESCUELAS SUPERIORES DE FORMACIÓN DE MAESTROS Y UNIDADES ACADÉMICAS DEL ESTADO PLURINACIONAL DE BOLIVIA - GESTIÓN 2026';
+            if (filters.tipo_postulacion === 'Becas') {
+                pdfTitle = 'ADMISIÓN DE POSTULANTES A LAS ESCUELAS SUPERIORES DE FORMACIÓN DE MAESTROS Y UNIDADES ACADÉMICAS DEL ESTADO PLURINACIONAL DE BOLIVIA - GESTIÓN 2026';
+            } else if (filters.tipo_postulacion === 'compulsa') {
+                pdfTitle = 'CONVOCATORIA PÚBLICA ESFM/UA N°001/2026 COMPULSA DE MÉRITOS PROFESIONALES PARA OPTAR A CARGOS DIRECTIVOS, DOCENTES Y ADMINISTRATIVOS ACÉFALOS DE LAS ESFM/UA GESTIÓN 2026 LISTA DE CONTROL';
+            }
 
-            doc.text(pdfTitle, margin, 100, {
+            doc.text(pdfTitle.toUpperCase(), margin, currentY, {
                 width: usableWidth,
-                align: 'center'
+                align: 'center',
+                lineGap: 3
             });
 
-            // Line under title
-            doc.moveTo(margin, 125).lineTo(pageWidth - margin, 125).lineWidth(1.5).stroke();
+            currentY += 65;
 
             // ==================== INFO BOX ====================
-            let currentY = 135;
-            const infoBoxHeight = 65;
+            const headerBgColor = '#706000'; // Olive/Gold
+            const labelWidth = 130;
 
-            // Box
-            doc.rect(margin, currentY, usableWidth, infoBoxHeight).lineWidth(1).stroke();
+            doc.font('Helvetica-Bold').fontSize(10);
 
-            // Row 1: Departamento and Municipio
-            doc.font('Helvetica-Bold').fontSize(9);
-            doc.text('DEPARTAMENTO:', margin + 10, currentY + 10);
-            doc.font('Helvetica').fontSize(9);
-            doc.text(deptName.toUpperCase(), margin + 95, currentY + 10);
+            // Row 1: Departamento
+            doc.rect(margin, currentY, labelWidth, 18).fill(headerBgColor);
+            doc.fillColor('#FFF').text('DEPARTAMENTO', margin + 5, currentY + 5, { width: labelWidth - 10, align: 'center' });
+            doc.rect(margin + labelWidth, currentY, usableWidth - labelWidth, 18).stroke();
+            doc.fillColor('#000').font('Helvetica').text(deptName.toUpperCase(), margin + labelWidth + 10, currentY + 5);
 
-            doc.font('Helvetica-Bold').fontSize(9);
-            doc.text('MUNICIPIO:', margin + 300, currentY + 10);
-            doc.font('Helvetica').fontSize(9);
-            doc.text(municipioName.toUpperCase(), margin + 360, currentY + 10);
+            currentY += 18;
 
-            // Row 2: Recinto and Aula
-            doc.font('Helvetica-Bold').fontSize(9);
-            doc.text('RECINTO:', margin + 10, currentY + 28);
-            doc.font('Helvetica').fontSize(9);
-            doc.text(recintoName.toUpperCase(), margin + 95, currentY + 28, { width: 190 });
+            // Row 2: Aula + Recinto
+            doc.rect(margin, currentY, labelWidth, 18).fill(headerBgColor);
+            doc.fillColor('#FFF').font('Helvetica-Bold').text('AULA', margin + 5, currentY + 5, { width: labelWidth - 10, align: 'center' });
+            doc.rect(margin + labelWidth, currentY, 100, 18).stroke();
+            doc.fillColor('#000').font('Helvetica').text(aulaName.toString().toUpperCase(), margin + labelWidth + 10, currentY + 5);
 
-            doc.font('Helvetica-Bold').fontSize(9);
-            doc.text('AULA:', margin + 300, currentY + 28);
-            doc.font('Helvetica').fontSize(9);
-            doc.text(aulaName.toString().toUpperCase(), margin + 360, currentY + 28);
+            doc.rect(margin + labelWidth + 100, currentY, 80, 18).fill(headerBgColor);
+            doc.fillColor('#FFF').font('Helvetica-Bold').text('RECINTO', margin + labelWidth + 100, currentY + 5, { width: 80, align: 'center' });
+            doc.rect(margin + labelWidth + 100 + 80, currentY, usableWidth - (labelWidth + 100 + 80), 18).stroke();
+            doc.fillColor('#000').font('Helvetica').fontSize(7).text(recintoName.toUpperCase(), margin + labelWidth + 100 + 85, currentY + 6, { width: usableWidth - (labelWidth + 100 + 80) - 10 });
 
-            // Row 3: Turno and Fecha
-            doc.font('Helvetica-Bold').fontSize(9);
-            doc.text('TURNO:', margin + 10, currentY + 46);
-            doc.font('Helvetica').fontSize(9);
-            doc.text(filters.turno ? filters.turno.toUpperCase() : '-', margin + 95, currentY + 46);
+            currentY += 18;
+            doc.fontSize(10);
 
-            doc.font('Helvetica-Bold').fontSize(9);
-            doc.text('FECHA:', margin + 300, currentY + 46);
-            doc.font('Helvetica').fontSize(9);
-            doc.text(filters.fecha ? formatDate(filters.fecha) : '-', margin + 360, currentY + 46);
+            // Row 3: Turno + Fecha
+            doc.rect(margin, currentY, labelWidth, 18).fill(headerBgColor);
+            doc.fillColor('#FFF').font('Helvetica-Bold').text('TURNO', margin + 5, currentY + 5, { width: labelWidth - 10, align: 'center' });
+            doc.rect(margin + labelWidth, currentY, 100, 18).stroke();
+            doc.fillColor('#000').font('Helvetica').text(filters.turno ? filters.turno.toUpperCase() : '-', margin + labelWidth + 10, currentY + 5);
 
-            currentY = 210;
+            doc.rect(margin + labelWidth + 100, currentY, 80, 18).fill(headerBgColor);
+            doc.fillColor('#FFF').font('Helvetica-Bold').text('FECHA', margin + labelWidth + 100, currentY + 5, { width: 80, align: 'center' });
+            doc.rect(margin + labelWidth + 100 + 80, currentY, usableWidth - (labelWidth + 100 + 80), 18).stroke();
+            doc.fillColor('#000').font('Helvetica').text(filters.fecha ? formatDate(filters.fecha) : '-', margin + labelWidth + 100 + 85, currentY + 5);
+
+            currentY += 45;
 
             // ==================== TABLE ====================
-            // Column configuration
             const cols = [
                 { header: 'N°', width: 25, align: 'center' },
-                { header: 'C.I.', width: 65, align: 'center' },
-                { header: 'NOMBRE POSTULANTE', width: 170, align: 'left', small: true },
-                { header: 'ESFM/UA', width: 110, align: 'left', small: true },
-                { header: 'EQUIPO', width: 45, align: 'center' },
-                { header: 'FIRMA', width: 137, align: 'center' }
+                { header: 'NOMBRE POSTULANTE', width: 180, align: 'center' },
+                { header: 'CI', width: 85, align: 'center' },
+                { header: 'FIRMA\nINGRESO', width: 80, align: 'center' },
+                { header: 'FIRMA\nSALIDA', width: 80, align: 'center' },
+                { header: 'OBSERVACIONES', width: 82, align: 'center' }
             ];
 
-            const rowHeight = 30; // Increased for more signature space
+            const rowHeight = 35;
             const headerHeight = 32;
 
-            // Draw table header
             let xPos = margin;
-            doc.font('Helvetica-Bold').fontSize(9);
+            doc.font('Helvetica-Bold').fontSize(8);
 
-            // Header background with gradient effect
-            doc.rect(margin, currentY, usableWidth, headerHeight).fillAndStroke('#d0d0d0', '#000');
+            doc.rect(margin, currentY, usableWidth, headerHeight).fill(headerBgColor);
 
-            // Header text
-            doc.fillColor('#000');
+            doc.fillColor('#FFF');
             cols.forEach(col => {
-                const textY = currentY + (col.header.includes('\n') ? 9 : 13);
-                doc.text(col.header, xPos, textY, {
+                doc.text(col.header, xPos, currentY + (col.header.includes('\n') ? 7 : 12), {
                     width: col.width,
-                    align: col.align
+                    align: col.align as any
                 });
                 xPos += col.width;
             });
 
             currentY += headerHeight;
 
-            // Draw table rows
-            doc.font('Helvetica').fontSize(9);
+            doc.font('Helvetica').fontSize(10).fillColor('#000');
 
             data.forEach((item, index) => {
-                // Check if we need a new page
-                if (currentY + rowHeight > pageHeight - 150) {
+                if (currentY + rowHeight > pageHeight - 120) {
                     doc.addPage();
-                    currentY = 100; // Start new pages at the same margin
+                    currentY = 100;
 
-                    // Redraw header on new page
                     xPos = margin;
-                    doc.font('Helvetica-Bold').fontSize(9);
-                    doc.rect(margin, currentY, usableWidth, headerHeight).fillAndStroke('#d0d0d0', '#000');
-                    doc.fillColor('#000');
+                    doc.rect(margin, currentY, usableWidth, headerHeight).fill(headerBgColor);
+                    doc.fillColor('#FFF').font('Helvetica-Bold');
                     cols.forEach(col => {
-                        const textY = currentY + (col.header.includes('\n') ? 9 : 13);
-                        doc.text(col.header, xPos, textY, {
+                        doc.text(col.header, xPos, currentY + (col.header.includes('\n') ? 7 : 12), {
                             width: col.width,
-                            align: col.align
+                            align: col.align as any
                         });
                         xPos += col.width;
                     });
                     currentY += headerHeight;
-                    doc.font('Helvetica').fontSize(9);
+                    doc.font('Helvetica').fillColor('#000');
                 }
 
-                // Alternate row colors
-                if (index % 2 === 0) {
-                    doc.rect(margin, currentY, usableWidth, rowHeight).fill('#fafafa');
-                }
-
-                // Draw row border
-                doc.rect(margin, currentY, usableWidth, rowHeight).stroke();
-
-                // Concatenate full name: PATERNO MATERNO, NOMBRE
-                const fullName = item.persona
-                    ? `${item.persona.paterno || ''} ${item.persona.materno || ''}, ${item.persona.nombre || ''}`.trim().replace(/,\s*$/, '')
-                    : '-';
-
-                // Draw cell content
                 xPos = margin;
+                const displayName = filters.tipo_postulacion === 'compulsa'
+                    ? (item.persona?.nombre_completo || '-')
+                    : `${item.persona?.paterno || ''} ${item.persona?.materno || ''}, ${item.persona?.nombre || ''}`.trim().replace(/,\s*$/, '');
+
                 const rowData = [
                     (index + 1).toString(),
+                    displayName.toUpperCase(),
                     item.ci,
-                    fullName.toUpperCase(),
-                    item.esfm || '-',
-                    item.equipo || '-',
+                    '',
+                    '',
                     ''
                 ];
 
-                doc.fillColor('#000');
+                doc.rect(margin, currentY, usableWidth, rowHeight).stroke();
+
                 rowData.forEach((text, colIndex) => {
-                    // Draw vertical lines
                     if (colIndex > 0) {
                         doc.moveTo(xPos, currentY).lineTo(xPos, currentY + rowHeight).stroke();
                     }
 
-                    // Set font size: smaller for ESFM/UA (index 3)
-                    const fontSize = (cols[colIndex] as any).small ? 7 : 9;
-                    doc.fontSize(fontSize);
-
-                    doc.text(text, xPos + 3, currentY + (fontSize === 7 ? 12 : 10), {
-                        width: cols[colIndex].width - 6,
-                        align: cols[colIndex].align as any
+                    doc.text(text, xPos + 2, currentY + 14, {
+                        width: cols[colIndex].width - 4,
+                        align: (colIndex === 1) ? 'left' : 'center' as any
                     });
                     xPos += cols[colIndex].width;
                 });
@@ -440,63 +413,40 @@ export class ReportsService {
             });
 
             // ==================== SUMMARY BOX ====================
-            currentY += 20;
-
-            // Check if summary fits on current page
-            if (currentY + 110 > pageHeight - margin) {
+            currentY += 15; // Reduced padding
+            if (currentY + 150 > pageHeight - margin) {
                 doc.addPage();
-                currentY = 50;
+                currentY = 120;
             }
 
-            // Box with double border for emphasis
-            const summaryHeight = 145;
-            doc.rect(margin, currentY, usableWidth, summaryHeight).lineWidth(1.5).stroke();
-            doc.rect(margin + 2, currentY + 2, usableWidth - 4, summaryHeight - 4).lineWidth(0.5).stroke();
+            const footerLabelWidth = 180;
+            const footerRowHeight = 22;
 
-            // Title with background
-            doc.rect(margin, currentY, usableWidth, 28).fillAndStroke('#e8e8e8', '#000');
-            doc.fillColor('#000');
-            doc.font('Helvetica-Bold').fontSize(12);
-            doc.text('RESUMEN Y FIRMAS DE RESPONSABILIDAD', margin + 10, currentY + 10);
+            const drawFooterRow = (label: string, value: string = '') => {
+                doc.rect(margin, currentY, footerLabelWidth, footerRowHeight).fill(headerBgColor);
+                doc.fillColor('#FFF').font('Helvetica-Bold').fontSize(8).text(label, margin + 5, currentY + 6, { width: footerLabelWidth - 10, align: 'center' });
+                doc.rect(margin + footerLabelWidth, currentY, usableWidth - footerLabelWidth, footerRowHeight).stroke();
+                doc.fillColor('#000').font('Helvetica').text(value, margin + footerLabelWidth + 10, currentY + 6);
+                currentY += footerRowHeight;
+            };
 
-            // Counts
-            currentY += 35;
-            doc.font('Helvetica-Bold').fontSize(9);
-            doc.text('CANTIDAD DE POSTULANTES:', margin + 10, currentY);
-            doc.font('Helvetica').fontSize(10);
-            doc.text(data.length.toString(), margin + 180, currentY);
+            drawFooterRow('N° DE POSTULANTES PRESENTES');
+            drawFooterRow('N° DE POSTULANTES AUSENTES');
+            drawFooterRow('N° DE POSTULANTES INHABILITADOS');
 
-            doc.font('Helvetica-Bold').fontSize(9);
-            doc.text('CANTIDAD QUE ASISTIERON:', margin + 300, currentY);
-            doc.font('Helvetica').fontSize(10);
-            doc.text('________', margin + 470, currentY);
+            doc.rect(margin, currentY, footerLabelWidth, footerRowHeight).fill(headerBgColor);
+            doc.fillColor('#FFF').font('Helvetica-Bold').text('NOMBRE DEL\nRESPONSABLE DE AULA', margin, currentY + 4, { width: footerLabelWidth, align: 'center' });
+            doc.rect(margin + footerLabelWidth, currentY, usableWidth - footerLabelWidth - 120, footerRowHeight).stroke();
 
-            currentY += 20;
-            doc.font('Helvetica-Bold').fontSize(9);
-            doc.text('CANTIDAD AUSENTES:', margin + 10, currentY);
-            doc.font('Helvetica').fontSize(10);
-            doc.text('________', margin + 180, currentY);
+            doc.rect(pageWidth - margin - 120, currentY, 40, footerRowHeight).fill(headerBgColor);
+            doc.fillColor('#FFF').text('CELULAR', pageWidth - margin - 120, currentY + 7, { width: 40, align: 'center' });
+            doc.rect(pageWidth - margin - 80, currentY, 80, footerRowHeight).stroke();
 
-            doc.font('Helvetica-Bold').fontSize(9);
-            doc.text('CANTIDAD DE ANULADOS:', margin + 300, currentY);
-            doc.font('Helvetica').fontSize(10);
-            doc.text('________', margin + 470, currentY);
+            currentY += footerRowHeight;
 
-            // Signatures
-            currentY += 35;
-            doc.font('Helvetica-Bold').fontSize(8);
-
-            // Coordinator & Supervisor Row
-            doc.text('NOMBRE Y FIRMA COORDINADOR:', margin + 20, currentY);
-            doc.moveTo(margin + 20, currentY + 25).lineTo(margin + 230, currentY + 25).lineWidth(0.5).stroke();
-
-            doc.text('NOMBRE Y FIRMA SUPERVISOR:', margin + 310, currentY);
-            doc.moveTo(margin + 310, currentY + 25).lineTo(margin + 520, currentY + 25).lineWidth(0.5).stroke();
-
-            // Responsible Row
-            currentY += 35;
-            doc.text('COORDINADOR DE AULA (Nombre, Firma y Celular):', margin + 20, currentY);
-            doc.moveTo(margin + 20, currentY + 20).lineTo(pageWidth - margin - 20, currentY + 20).lineWidth(0.5).stroke();
+            doc.rect(margin, currentY, footerLabelWidth, 40).fill(headerBgColor);
+            doc.fillColor('#FFF').text('FIRMA', margin, currentY + 15, { width: footerLabelWidth, align: 'center' });
+            doc.rect(margin + footerLabelWidth, currentY, usableWidth - footerLabelWidth, 40).stroke();
 
             doc.end();
 

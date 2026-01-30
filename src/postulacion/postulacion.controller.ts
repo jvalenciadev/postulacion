@@ -23,10 +23,22 @@ export class PostulacionController {
     verifyBecas(@Body('ci') ci: string) {
         return this.postulacionService.verifyCiBecas(ci);
     }
+    
+    @Post('verificar-compulsas')
+    @UseGuards(ApiKeyGuard)
+    verifyCompulsas(@Body('ci') ci?: string, @Body('name') name?: string) {
+        return this.postulacionService.verifyCiCompulsas(ci, name);
+    }
 
     @Get('consultarBecas')
     @Render('consultar_becas')
     getConsultarBecasPage() {
+        return { layout: false };
+    }
+
+    @Get('consultarCompulsas')
+    @Render('consultar_compulsas')
+    getConsultarCompulsasPage() {
         return { layout: false };
     }
 }

@@ -41,6 +41,9 @@ export class Postulacion {
     @Column({ nullable: true })
     discapacidad: string;
 
+    @Column({ nullable: true })
+    cargo: string;
+
     @Column({ name: 'tipo_postulacion', nullable: true })
     tipoPostulacion: string;
 

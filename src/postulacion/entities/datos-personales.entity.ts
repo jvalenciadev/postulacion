@@ -13,4 +13,10 @@ export class DatosPersonales {
 
     @Column({ nullable: true })
     materno: string;
+
+    @Column({ nullable: true })
+    nombre_completo: string;
+
+    @Column({ type: 'datetime', nullable: true })
+    fecha_actualizado: Date;
 }

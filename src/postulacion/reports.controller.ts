@@ -20,13 +20,15 @@ export class ReportsController {
         const result = await this.reportsService.getFilters(); // Dep/Recinto filters are same logic base
         return { layout: false, ...result };
     }
-
-    @Get('stats')
-    @Render('stats')
-    async getStatsPage() {
-        return { layout: false };
+    
+    @Get('Compulsas')
+    @Render('compulsas') // Renders views/becas.hbs for Becas
+    async getCompulsasReportsPage() {
+        const result = await this.reportsService.getFilters(); // Dep/Recinto filters are same logic base
+        return { layout: false, ...result };
     }
 
+   
     @Get('reports/api/departamentos')
     async getDepartamentos() {
         const result = await this.reportsService.getFilters();
